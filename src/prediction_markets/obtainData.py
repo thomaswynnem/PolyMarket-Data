@@ -180,9 +180,97 @@ async def analyzeContracts(smartContracts):
         tasks = [getBuyInfo(session, contract) for contract in smartContracts if contract.startswith('0x')]
         await asyncio.gather(*tasks)
 
+async def getSellInfo(session, smartContract):
+    try:
+        url = "https://polygon-rpc.com/"
+        payload = {
+            "method": "eth_getLogs",
+            "params": [
+                {
+                    "fromBlock": "0", 
+                    "toBlock": "latest", 
+                    "address": smartContract,
+                    "topics": [
+                        "0xadcf2a240ed9300d681d9a3f5382b6c1beed1b7e46643e0c7b42cbe6e2d766b4"
+                    ]
+                }
+            ],
+            "id": 1,
+            "jsonrpc": "2.0"
+        }
+        headers = {"Content-Type": "application/json"}
+
+        async with session.post(url, json=payload, headers=headers) as response:
+            if response.status == 429:
+                print(f"Rate limit exceeded for contract {smartContract}. Retrying in 10 seconds...")
+                await asyncio.sleep(10)
+                return await getSellInfo(session, smartContract)
+            elif response.status != 200:
+                print(f"Error: {response.status}, {await response.text()}")
+                return
+            logs = await response.json()
+
+        abi = {
+            "anonymous": False,
+            "inputs": [
+                {
+                    "indexed": True,
+                    "name": "seller",
+                    "type": "address"
+                },
+                {
+                    "indexed": False,
+                    "name": "returnAmount",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": False,
+                    "name": "feeAmount",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": True,
+                    "name": "outcomeIndex",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": False,
+                    "name": "outcomeTokensSold",
+                    "type": "uint256"
+                }
+            ],
+            "name": "FPMMSell",
+            "type": "event"
+        }
+
+        web3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider(url))
+        contract = web3.eth.contract(address=smartContract, abi=[abi])
+        totalLogs = []
+        for log in logs['result']:
+            decodedLog = contract.events.FPMMSell().process_log(log)
+            info = decodedLog['args']
+            totalLogs.append(info)
+        
+        df = pd.DataFrame(totalLogs)
+        df['smartContract'] = smartContract
+
+        file_path = f'./data/bronze/contract_sell_{smartContract}.csv'
+        df.to_csv(file_path, index=False)
+        print(f"Sell data for contract {smartContract} saved to {file_path}")
+
+    except Exception as e:
+        print(f"Error for contract {smartContract}: {e}")
+
+async def analyzeSellContracts(smartContracts):
+    async with aiohttp.ClientSession() as session:
+        tasks = [getSellInfo(session, contract) for contract in smartContracts if contract.startswith('0x')]
+        await asyncio.gather(*tasks)
+
 
 # %%
 def main():
+
+    # pull market data from gamma
     for year in years:
         a = getMarketsData(year)
 
@@ -195,7 +283,7 @@ def main():
     os.makedirs('./data/silver', exist_ok=True)
     marketsdf.to_csv("./data/silver/markets.csv", index=False)
 
-    # pull data from each contract
+    # pull buydata from each contract from polygon-rpc
     smartContracts = marketsdf['marketMakerAddress'].drop_duplicates().tolist()
     asyncio.run(analyzeContracts(smartContracts))
 
@@ -208,6 +296,18 @@ def main():
     contractBuydf = contractBuydf.reset_index(drop=True)
     contractBuydf.to_csv("./data/silver/contract_buy.csv", index=False)
     
+
+    # pull sell data from each contract from polygon-rpc
+    asyncio.run(analyzeSellContracts(smartContracts))
+
+    contractSelldf = pd.DataFrame()
+
+    for f in glob.glob('./data/bronze/contract_sell_*.csv'):
+        df = pd.read_csv(f)
+        contractSelldf = pd.concat([contractSelldf, df])
+
+    contractSelldf = contractSelldf.reset_index(drop=True)
+    contractSelldf.to_csv("./data/silver/contract_sell.csv", index=False)
 
 if __name__ == "__main__":
     main()
