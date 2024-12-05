@@ -2,7 +2,7 @@
 import pandas as pd
 
 
-from obtainContracts import main
+from prediction_markets.obtainContracts import main
 
 allcontracts = main()
 
