@@ -2,23 +2,30 @@
 # Loaded variable 'df' from URI: /Users/akuehlka/work/crc/prediction_markets/data/silver/markets.csv
 import pandas as pd
 import os
-df = pd.read_csv(r'/Users/akuehlka/work/crc/prediction_markets/data/silver/markets.csv')
+
+df = pd.read_csv(r'../silver/markets.csv')
 # %%
-categories = list(df.category.unique())
-# remove nan values
-categories = [c for c in categories if pd.notna(c) and not c.endswith('-')]
-categories
+custom_categories = [
+    "Crypto",
+    "Coronavirus",
+    "Politics",
+    "Pop-Culture",
+    "Sports",
+    "Science-Tech"
+    "Business",
+]
 
 #%%
 from openai import OpenAI
 from dotenv import load_dotenv
-load_dotenv("../.env")
+
+load_dotenv()
 
 # Ensure API key is set
-if not os.getenv("OPENAI_API_KEY"):
+if not os.getenv("API_KEY"):
     raise ValueError("OPENAI_API_KEY environment variable must be set")
     
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("API_KEY"))
 
 # %%
 import os
@@ -34,7 +41,7 @@ def categorize_text(text: str) -> str:
         String containing the matched category
     """
     # Format categories list for prompt
-    categories_str = "\n".join([f"- {c}" for c in categories])
+    categories_str = "\n".join([f"- {c}" for c in custom_categories])
     
     prompt = f"""Given the following categories:
 
@@ -56,7 +63,7 @@ Return only the category name, exactly as written above, with no additional text
     predicted_category = response.choices[0].message.content.strip()
     
     # Validate the response is one of our categories
-    if predicted_category not in categories:
+    if predicted_category not in custom_categories:
         # raise ValueError(f"GPT returned '{predicted_category}' which is not in the predefined categories")
         print(f"GPT returned '{predicted_category}' which is not in the predefined categories")
     return predicted_category
