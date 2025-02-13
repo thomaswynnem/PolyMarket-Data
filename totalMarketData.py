@@ -19,48 +19,75 @@ from contracts import marketDetails
 
 from categories import runCategories
 
-from manualCatFixes import manualCategoryFixer
+from aifixer import aifixer
 
-'''
 
-os.mkdir('data/silver/allContracts')
+if not os.path.exists('data/silver/allContracts'):
+    os.mkdir('data/silver/allContracts')
 
-marketsDF = pd.read_csv('data/silver/markets_with_categories.csv')
+### Collect Data
+filepath = 'data/silver/markets_with_ai_categories.csv'
+if not os.path.exists(filepath):
+    marketsDF = pd.read_csv('data/silver/markets.csv')
+    marketsDF = aifixer(marketsDF)
+else:
+    marketsDF = pd.read_csv(filepath)
 
-marketsDF = manualCategoryFixer(marketsDF)
+
+if 'predicted_category' in marketsDF:
+    marketsDF = marketsDF.drop(columns='category')
+    marketsDF = marketsDF.rename(columns={'predicted_category': 'category'})
+    marketsDF.to_csv(filepath)
+    print("All Clear")
 
 marketOutcomes = pd.read_csv('data/silver/marketOutcomes.csv')
 
 totalBuyScansDF = pd.read_csv('data/silver/contract_buy.csv')
+###
 
-bettorCorrectRate, totalBuys, totalCorrect = correctPerc(totalBuyScansDF, marketOutcomes)
+### CorrectsRates
+filepath1 = 'data/silver/allContracts/correctsRates.csv'
 
-contractCorrectRates, intervals = correctIntervals(totalBuyScansDF, marketOutcomes)
+if not os.path.exists(filepath1):
+    bettorCorrectRate, totalBuys, totalCorrect = correctPerc(totalBuyScansDF, marketOutcomes)
 
-contractCorrectRate = correctContracts(totalBuyScansDF, marketOutcomes)
+    contractCorrectRates, intervals = correctIntervals(totalBuyScansDF, marketOutcomes)
 
-correctRateDF = pd.DataFrame([bettorCorrectRate,contractCorrectRate,[contractCorrectRates],[intervals]], index=["BettorCorrectRate", "contractCorrectRate","cCRbyDistr","Distribution"])
-correctRateDF.to_csv('data/silver/allContracts/correctsRates.csv')
+    contractCorrectRate = correctContracts(totalBuyScansDF, marketOutcomes)
 
-intervalBracket, correctRate, buygr = intervalPerc(totalBuyScansDF, marketOutcomes)
-quarterCorrect, quarterTotal = contractSwitcher(totalBuyScansDF, marketOutcomes)
-quarterSizedCorrect, quarterSizedTotal = contractSizedSwitcher(totalBuyScansDF, marketOutcomes, 1500)
-quarterAmounts = contractAmountSwitcher(totalBuyScansDF)
+    correctRateDF = pd.DataFrame([bettorCorrectRate,contractCorrectRate,[contractCorrectRates],[intervals]], index=["BettorCorrectRate", "contractCorrectRate","cCRbyDistr","Distribution"])
+    correctRateDF.to_csv(filepath1)
+###
 
-quarterPerc = []
-quarterSizedPerc = []
-for iv in range(4):
+### timeline_quarterDF
+path2 = 'data/silver/allContracts/timeline_quarterDF.csv'
 
-    quarterPerc.append(quarterCorrect[iv]/quarterTotal[iv])
-    quarterSizedPerc.append(quarterSizedCorrect[iv]/quarterSizedTotal[iv])
+if not os.path.exists(path2):
+    quarterCorrect, quarterTotal = contractSwitcher(totalBuyScansDF, marketOutcomes)
+    quarterSizedCorrect, quarterSizedTotal = contractSizedSwitcher(totalBuyScansDF, marketOutcomes, 1500)
+    quarterAmounts = contractAmountSwitcher(totalBuyScansDF)
+
+    quarterPerc = []
+    quarterSizedPerc = []
+    for iv in range(4):
+
+        quarterPerc.append(quarterCorrect[iv]/quarterTotal[iv])
+        quarterSizedPerc.append(quarterSizedCorrect[iv]/quarterSizedTotal[iv])
 
 
-timelineDF = pd.DataFrame([quarterAmounts, quarterTotal, quarterPerc, quarterSizedTotal, quarterSizedPerc], index=["Money","Bets", "PercC", "BigBets","BigPercC"], columns=["Quarter1", "Quarter2", "Quarter3", "Quarter4"])
-timelineDF.to_csv(f'data/silver/allContracts/timeline_quarterDF.csv')
+    timelineDF = pd.DataFrame([quarterAmounts, quarterTotal, quarterPerc, quarterSizedTotal, quarterSizedPerc], index=["Money","Bets", "PercC", "BigBets","BigPercC"], columns=["Quarter1", "Quarter2", "Quarter3", "Quarter4"])
+    timelineDF.to_csv(path2)
+###
 
-dollarlyDF = pd.DataFrame([buygr, correctRate], index=["Number of Bets", "Correct Rate"], columns=["0", "100", "200","300","400","500","600","700","800","900",])
-dollarlyDF.to_csv(f'data/silver/allContracts/dollarly_valueDF.csv')
+### valueDF
+path3 = 'data/silver/allContracts/valueDF.csv'
+if not os.path.exists(path3):
+    intervalBracket, correctRate, buygr = intervalPerc(totalBuyScansDF, marketOutcomes)
+    dollarlyDF = pd.DataFrame([buygr, correctRate], index=["Number of Bets", "Correct Rate"], columns=["0", "100", "200","300","400","500","600","700","800","900",])
+    dollarlyDF.to_csv(path3)
+###
+
 
 marketDetails()
-'''
+
 runCategories()
