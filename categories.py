@@ -17,13 +17,10 @@ from largeInvQuarters import contractSizedSwitcher
 from timeLineAmounts import contractAmountSwitcher
 
 
-from manualCatFixes import manualCategoryFixer
-
 def runCategories():
     os.mkdir('data/silver/Subjects')
 
-    marketsDF = marketsDF = pd.read_csv('data/silver/markets_with_categories.csv')
-    marketsDF = manualCategoryFixer(marketsDF)
+    marketsDF = marketsDF = pd.read_csv('data/silver/markets_with_ai_categories.csv')
 
     categories = marketsDF['category'].unique()
 

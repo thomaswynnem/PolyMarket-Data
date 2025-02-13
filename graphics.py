@@ -62,7 +62,7 @@ plt.show()
 
 
 ## Correct Rate for Value of Bet
-
+'''
 data = pd.read_csv("data/silver/allContracts/dollarly_valueDF.csv")
 # manually chaned dollarly_valueDF to have ints instead of intervals
 print(data)
@@ -84,7 +84,7 @@ sns.scatterplot(x='dollarly_value',y='correct_rate', data=data, hue = 'dollarly_
 
 
 plt.show()
-
+'''
 
 ## Correct Rate for Time of Bet
 

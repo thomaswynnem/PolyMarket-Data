@@ -3,7 +3,7 @@ import pandas as pd
 
 def marketDetails():
 
-    marketsDF = pd.read_csv("data/silver/markets_with_categories.csv")
+    marketsDF = pd.read_csv("data/silver/markets_with_ai_categories.csv")
 
     totalBuyScansDF = pd.read_csv('data/silver/contract_buy.csv')
 
